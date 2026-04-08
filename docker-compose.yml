@@ -1,7 +1,7 @@
 services:
   opencode:
     image: ghcr.io/anomalyco/opencode:1.4.0
-    container_name: oh-my-opencode
+
     stdin_open: true
     tty: true
     network_mode: host
@@ -20,7 +20,7 @@ services:
 
   opencode-nvidia:
     image: ghcr.io/anomalyco/opencode:1.4.0
-    container_name: oh-my-opencode-nvidia
+
     stdin_open: true
     tty: true
     network_mode: host
