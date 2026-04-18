@@ -15,7 +15,7 @@ services:
       - ./data/share:/root/.local/share/opencode
       - ./data/state:/root/.local/state/opencode
       - ./data/cache:/root/.cache/opencode
-      - .:/workspace
+      - ${OPENCODE_WORKSPACE:-.}:/workspace
     working_dir: /workspace
 
   opencode-nvidia:
@@ -36,7 +36,7 @@ services:
       - ./data/share:/root/.local/share/opencode
       - ./data/state:/root/.local/state/opencode
       - ./data/cache:/root/.cache/opencode
-      - .:/workspace
+      - ${OPENCODE_WORKSPACE:-.}:/workspace
     working_dir: /workspace
     deploy:
       resources:

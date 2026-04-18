@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE_FILE="${OPENCODE_COMPOSE_FILE:-$SCRIPT_DIR/../docker-compose.yml}"
 COMPOSE_DIR="$(cd "$(dirname "$COMPOSE_FILE")" && pwd)"
 
+export OPENCODE_WORKSPACE="$PWD"
+
 # Start Ollama proxy if not already running (Docker Desktop can't reach LAN)
 OLLAMA_HOST="${OLLAMA_HOST:-192.168.1.69:11434}"
 OLLAMA_PROXY_PORT="${OLLAMA_PROXY_PORT:-11435}"
