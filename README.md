@@ -115,6 +115,54 @@ All state is bind-mounted to `data/` in the project directory:
 
 To start fresh, delete the `data/` directory.
 
+## Portability
+
+### Transfer setup to another machine
+
+Copy `data/` and `.env` to the new machine — everything is self-contained:
+
+```bash
+# Machine A: after setup, auth, and plugin install
+tar czf opencode-portable.tar.gz data/ .env
+
+# Machine B: clone the repo, extract, run
+git clone <this-repo> && cd oh-my-opencode
+tar xzf opencode-portable.tar.gz
+opencode   # ready to go
+```
+
+No re-authentication (until OAuth tokens expire), no reconfiguring providers, no reinstalling plugins or MCPs.
+
+**Caveats:**
+- OAuth tokens have a lifetime — they'll work immediately but will eventually need re-auth via `opencode providers`
+- LAN IP endpoints in `data/config/opencode.json` (e.g., Ollama at `192.168.1.69:11434`) must be reachable from the new machine
+- `data/state/` is just lock files — safe to skip, they regenerate
+
+### Migrate from Claude Code
+
+OpenCode reads Claude Code's command and skill files directly — no conversion needed. It loads from these locations (in priority order):
+
+| Priority | Location | Scope |
+|----------|----------|-------|
+| 1 | `.opencode/commands/*.md` | Project (OpenCode native) |
+| 2 | `data/config/commands/*.md` | Global (OpenCode native) |
+| 3 | `.claude/commands/*.md` | Project (Claude Code compat) |
+| 4 | `~/.claude/commands/*.md` | Global (Claude Code compat) |
+
+Both systems use the same markdown format with optional YAML frontmatter and support `$ARGUMENTS`, bash injection (`` !`command` ``), and file references.
+
+**Project commands** — already in `.claude/commands/`? They work automatically when you `opencode` in that project.
+
+**Global commands** — copy to OpenCode's config directory:
+
+```bash
+cp ~/.claude/commands/*.md data/config/commands/
+```
+
+**Skills** — same story. OpenCode discovers `.claude/skills/*/SKILL.md` automatically. For global skills, copy to `data/config/skills/<name>/SKILL.md`.
+
+**Note:** Claude Code's `allowed-tools` frontmatter field is ignored by OpenCode (which uses `agent` and `model` instead), but the command body works without changes.
+
 ## Uninstall
 
 Remove the shell wrapper:
