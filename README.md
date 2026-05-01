@@ -154,24 +154,31 @@ No re-authentication (until OAuth tokens expire), no reconfiguring providers, no
 
 OpenCode reads Claude Code's command and skill files directly — no conversion needed. It loads from these locations (in priority order):
 
-| Priority | Location | Scope |
-|----------|----------|-------|
-| 1 | `.opencode/commands/*.md` | Project (OpenCode native) |
-| 2 | `data/home/.config/opencode/commands/*.md` | Global (OpenCode native) |
-| 3 | `.claude/commands/*.md` | Project (Claude Code compat) |
-| 4 | `~/.claude/commands/*.md` | Global (Claude Code compat) |
+| Priority | Location (container) | Host path | Scope |
+|----------|---------------------|-----------|-------|
+| 1 | `<workspace>/.opencode/commands/*.md` | your project dir | Project (OpenCode native) |
+| 2 | `/root/.config/opencode/commands/*.md` | `data/home/.config/opencode/commands/*.md` | Global (OpenCode native) |
+| 3 | `<workspace>/.claude/commands/*.md` | your project dir | Project (Claude Code compat) |
+| 4 | `/root/.claude/commands/*.md` | `data/home/.claude/commands/*.md` | Global (Claude Code compat) |
+
+**Important — container isolation:** the container only sees the workspace (your current directory) and `data/home/` (mapped to `/root`). It **cannot** read your host's `~/.claude/` directory. Project-level `.claude/` works because the workspace is mounted; global Claude commands must be copied into `data/home/.claude/`.
 
 Both systems use the same markdown format with optional YAML frontmatter and support `$ARGUMENTS`, bash injection (`` !`command` ``), and file references.
 
-**Project commands** — already in `.claude/commands/`? They work automatically when you `opencode` in that project.
+**Project commands** — already in `.claude/commands/` in your project? They work automatically when you `opencode` in that project.
 
-**Global commands** — copy to OpenCode's config directory:
+**Global commands** — copy from your host into the bind-mounted home:
 
 ```bash
+# OpenCode native location
 cp ~/.claude/commands/*.md data/home/.config/opencode/commands/
+
+# Or keep the Claude Code layout
+mkdir -p data/home/.claude/commands
+cp ~/.claude/commands/*.md data/home/.claude/commands/
 ```
 
-**Skills** — same story. OpenCode discovers `.claude/skills/*/SKILL.md` automatically. For global skills, copy to `data/home/.config/opencode/skills/<name>/SKILL.md`.
+**Skills** — same story. Project skills under `<workspace>/.claude/skills/*/SKILL.md` are auto-discovered. For global skills, copy to `data/home/.config/opencode/skills/<name>/SKILL.md` or `data/home/.claude/skills/<name>/SKILL.md`.
 
 **Note:** Claude Code's `allowed-tools` frontmatter field is ignored by OpenCode (which uses `agent` and `model` instead), but the command body works without changes.
 
