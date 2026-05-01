@@ -4,6 +4,15 @@ Docker Compose setup for [OpenCode](https://opencode.ai) with [oh-my-openagent](
 
 Config, auth, and plugin data lives in `data/home/` so you can inspect and edit it from the host.
 
+## What this is
+
+A **container-isolated wrapper** for OpenCode. The agent runs inside a Docker container with a deliberately narrow view of the host:
+
+- **What's visible:** the directory you run `opencode` from (mounted at `/workspace`) and `data/home/` (mounted at `/root`).
+- **What's NOT visible:** your real home directory, `~/.ssh`, `~/.gitconfig`, `~/.claude/`, system credentials, other projects, anything outside the workspace.
+
+That's the point — you can let the agent run with broad permissions inside the container without it touching the rest of your machine. The trade-off is that any tools, configs, or credentials the agent needs (git, ssh, dotfiles, etc.) have to be brought into the container explicitly. See [Bringing tools and configs into the container](#bringing-tools-and-configs-into-the-container).
+
 ## Setup
 
 ### 1. Install the shell wrapper
@@ -126,6 +135,74 @@ All state is bind-mounted to `data/home/` in the project directory (mapped to `/
 | `data/home/.cache/` | `/root/.cache/` | npm package cache |
 
 To start fresh, delete the `data/` directory.
+
+## Bringing tools and configs into the container
+
+Because the container is isolated from your host, anything the agent needs to use — `git`, `ssh`, your shell history, your editor config — has to be either **installed in the image** or **bind-mounted via `data/home/`**.
+
+### Installing tools
+
+The container ships with what `ghcr.io/anomalyco/opencode:latest` provides. To add more (say, `ripgrep`, `jq`, language toolchains, a different `git` version), build your own image on top:
+
+```Dockerfile
+# Dockerfile
+FROM ghcr.io/anomalyco/opencode:latest
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git openssh-client ripgrep jq \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+```yaml
+# docker-compose.override.yml
+services:
+  opencode:
+    build: .
+    image: my-opencode:latest
+```
+
+Then `docker compose build` and run `opencode` as usual.
+
+### Bringing in dotfiles and credentials
+
+Anything you put under `data/home/` shows up at `/root/` inside the container. So:
+
+| Host path | Container path | Purpose |
+|-----------|---------------|---------|
+| `data/home/.gitconfig` | `/root/.gitconfig` | Git user/email, aliases, signing config |
+| `data/home/.ssh/` | `/root/.ssh/` | SSH keys, `known_hosts`, `config` |
+| `data/home/.bashrc`, `.zshrc` | `/root/.bashrc`, `.zshrc` | Shell aliases and env |
+| `data/home/.config/gh/` | `/root/.config/gh/` | GitHub CLI auth |
+| `data/home/.npmrc` | `/root/.npmrc` | npm tokens / registries |
+
+**Quick start — copy from your host:**
+
+```bash
+cp ~/.gitconfig data/home/.gitconfig
+cp -R ~/.ssh data/home/.ssh
+chmod 600 data/home/.ssh/*       # ssh requires strict permissions
+chmod 700 data/home/.ssh
+```
+
+**Symlink alternative** (lets host edits flow through automatically — note that this re-couples the container to your host):
+
+```bash
+ln -s ~/.gitconfig data/home/.gitconfig
+ln -s ~/.ssh data/home/.ssh
+```
+
+**Read-only mounts** (safer — agent can use the keys but can't modify or exfiltrate them on disk): add a bind mount in `docker-compose.override.yml`:
+
+```yaml
+services:
+  opencode:
+    volumes:
+      - ~/.ssh:/root/.ssh:ro
+      - ~/.gitconfig:/root/.gitconfig:ro
+```
+
+**Tradeoffs to consider:**
+- Copying `~/.ssh` into `data/home/.ssh` means the agent has full access to those keys. If that worries you, generate a dedicated key for in-container use and authorize only that key on the remotes you want the agent to reach.
+- The whole point of the container is isolation — the more host config you mount in, the more you erode that boundary. Mount only what the agent actually needs for the current task.
 
 ## Portability
 
