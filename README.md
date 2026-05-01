@@ -2,7 +2,7 @@
 
 Docker Compose setup for [OpenCode](https://opencode.ai) with [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent).
 
-Config, auth, and plugin data lives in `data/` so you can inspect and edit it from the host.
+Config, auth, and plugin data lives in `data/home/` so you can inspect and edit it from the host.
 
 ## Setup
 
@@ -58,6 +58,7 @@ opencode
 Other commands:
 
 ```bash
+opencode --vanilla            # Run without the oh-my-openagent plugin
 opencode run "explain this codebase"
 opencode models
 opencode agent list
@@ -79,7 +80,7 @@ Configure Ollama or vLLM endpoints inside the container:
 opencode providers
 ```
 
-Or edit `data/config/opencode.json` directly:
+Or edit `data/home/.config/opencode/opencode.json` directly. Reference templates are in `examples/`.
 
 ```json
 {
@@ -87,7 +88,7 @@ Or edit `data/config/opencode.json` directly:
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Ollama",
-      "options": { "baseURL": "http://192.168.1.69:11434/v1" },
+      "options": { "baseURL": "http://192.168.1.100:11434/v1" },
       "models": {
         "gemma4:31b": { "name": "Gemma 4 31B" }
       }
@@ -95,6 +96,17 @@ Or edit `data/config/opencode.json` directly:
   }
 }
 ```
+
+### LAN Ollama from Docker Desktop
+
+Docker Desktop for Mac/Windows can't route to LAN IPs from inside containers. The `opencode` wrapper auto-starts `scripts/ollama-proxy.py` which forwards container traffic to a remote Ollama host.
+
+Configure via env vars:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OLLAMA_HOST` | `192.168.1.100:11434` | Remote Ollama address |
+| `OLLAMA_PROXY_PORT` | `11435` | Local port the proxy listens on |
 
 ### Networking
 
@@ -104,14 +116,14 @@ The container uses `network_mode: host` so it has direct access to the host netw
 
 ## Data
 
-All state is bind-mounted to `data/` in the project directory:
+All state is bind-mounted to `data/home/` in the project directory (mapped to `/root` inside the container):
 
 | Path | Container path | Purpose |
 |------|---------------|---------|
-| `data/config/` | `/root/.config/opencode/` | Config, plugins, agent definitions |
-| `data/share/` | `/root/.local/share/opencode/` | Auth, sessions DB, logs |
-| `data/state/` | `/root/.local/state/opencode/` | Lock files |
-| `data/cache/` | `/root/.cache/opencode/` | Plugin package cache |
+| `data/home/.config/opencode/` | `/root/.config/opencode/` | Config, plugins, agent definitions |
+| `data/home/.local/share/` | `/root/.local/share/` | Auth, sessions DB, logs, MCP auth |
+| `data/home/.local/state/` | `/root/.local/state/` | Lock files, prompt history, model state |
+| `data/home/.cache/` | `/root/.cache/` | npm package cache |
 
 To start fresh, delete the `data/` directory.
 
@@ -126,7 +138,7 @@ Copy `data/` and `.env` to the new machine — everything is self-contained:
 tar czf opencode-portable.tar.gz data/ .env
 
 # Machine B: clone the repo, extract, run
-git clone <this-repo> && cd oh-my-opencode
+git clone <this-repo> && cd omo-docker
 tar xzf opencode-portable.tar.gz
 opencode   # ready to go
 ```
@@ -135,8 +147,8 @@ No re-authentication (until OAuth tokens expire), no reconfiguring providers, no
 
 **Caveats:**
 - OAuth tokens have a lifetime — they'll work immediately but will eventually need re-auth via `opencode providers`
-- LAN IP endpoints in `data/config/opencode.json` (e.g., Ollama at `192.168.1.69:11434`) must be reachable from the new machine
-- `data/state/` is just lock files — safe to skip, they regenerate
+- LAN IP endpoints in `data/home/.config/opencode/opencode.json` must be reachable from the new machine
+- `data/home/.local/state/` is just lock files — safe to skip, they regenerate
 
 ### Migrate from Claude Code
 
@@ -145,7 +157,7 @@ OpenCode reads Claude Code's command and skill files directly — no conversion 
 | Priority | Location | Scope |
 |----------|----------|-------|
 | 1 | `.opencode/commands/*.md` | Project (OpenCode native) |
-| 2 | `data/config/commands/*.md` | Global (OpenCode native) |
+| 2 | `data/home/.config/opencode/commands/*.md` | Global (OpenCode native) |
 | 3 | `.claude/commands/*.md` | Project (Claude Code compat) |
 | 4 | `~/.claude/commands/*.md` | Global (Claude Code compat) |
 
@@ -156,10 +168,10 @@ Both systems use the same markdown format with optional YAML frontmatter and sup
 **Global commands** — copy to OpenCode's config directory:
 
 ```bash
-cp ~/.claude/commands/*.md data/config/commands/
+cp ~/.claude/commands/*.md data/home/.config/opencode/commands/
 ```
 
-**Skills** — same story. OpenCode discovers `.claude/skills/*/SKILL.md` automatically. For global skills, copy to `data/config/skills/<name>/SKILL.md`.
+**Skills** — same story. OpenCode discovers `.claude/skills/*/SKILL.md` automatically. For global skills, copy to `data/home/.config/opencode/skills/<name>/SKILL.md`.
 
 **Note:** Claude Code's `allowed-tools` frontmatter field is ignored by OpenCode (which uses `agent` and `model` instead), but the command body works without changes.
 

@@ -8,7 +8,7 @@ COMPOSE_DIR="$(cd "$(dirname "$COMPOSE_FILE")" && pwd)"
 export OPENCODE_WORKSPACE="$PWD"
 
 # Start Ollama proxy if not already running (Docker Desktop can't reach LAN)
-OLLAMA_HOST="${OLLAMA_HOST:-192.168.1.69:11434}"
+OLLAMA_HOST="${OLLAMA_HOST:-192.168.1.100:11434}"
 OLLAMA_PROXY_PORT="${OLLAMA_PROXY_PORT:-11435}"
 if ! lsof -iTCP:"$OLLAMA_PROXY_PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
   "$SCRIPT_DIR/ollama-proxy.py" "$OLLAMA_HOST" "$OLLAMA_PROXY_PORT" &

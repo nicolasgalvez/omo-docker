@@ -1,6 +1,6 @@
 services:
   opencode:
-    image: ghcr.io/anomalyco/opencode:1.4.0
+    image: ghcr.io/anomalyco/opencode:latest
 
     stdin_open: true
     tty: true
@@ -11,15 +11,12 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
     volumes:
-      - ./data/config:/root/.config/opencode
-      - ./data/share:/root/.local/share/opencode
-      - ./data/state:/root/.local/state/opencode
-      - ./data/cache:/root/.cache/opencode
+      - ./data/home:/root
       - ${OPENCODE_WORKSPACE:-.}:/workspace
     working_dir: /workspace
 
   opencode-nvidia:
-    image: ghcr.io/anomalyco/opencode:1.4.0
+    image: ghcr.io/anomalyco/opencode:latest
 
     stdin_open: true
     tty: true
@@ -32,10 +29,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
       - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
     volumes:
-      - ./data/config:/root/.config/opencode
-      - ./data/share:/root/.local/share/opencode
-      - ./data/state:/root/.local/state/opencode
-      - ./data/cache:/root/.cache/opencode
+      - ./data/home:/root
       - ${OPENCODE_WORKSPACE:-.}:/workspace
     working_dir: /workspace
     deploy:

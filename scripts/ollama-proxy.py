@@ -6,7 +6,7 @@ This proxy runs on the Mac and forwards container traffic
 (via host.docker.internal) to the Ollama server on the LAN.
 
 Usage: ./ollama-proxy.py [OLLAMA_HOST] [LISTEN_PORT]
-  OLLAMA_HOST  - remote Ollama address (default: 192.168.1.69:11434)
+  OLLAMA_HOST  - remote Ollama address (default: 192.168.1.100:11434)
   LISTEN_PORT  - local port to listen on (default: 11434)
 """
 import socket
@@ -31,7 +31,7 @@ def forward(src, dst):
 
 
 def main():
-    remote = sys.argv[1] if len(sys.argv) > 1 else "192.168.1.69:11434"
+    remote = sys.argv[1] if len(sys.argv) > 1 else "192.168.1.100:11434"
     listen_port = int(sys.argv[2]) if len(sys.argv) > 2 else 11434
     remote_host, remote_port = remote.rsplit(":", 1)
     remote_port = int(remote_port)
